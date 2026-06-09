@@ -213,7 +213,7 @@ input,select,button{font-family:var(--font);}
       <span id="sync-status" class="sync-pill ss-idle">☁️</span>
       <button class="cbtn cb-up" onclick="cloudPush()" title="Sauvegarder sur le cloud">☁️↑</button>
       <button class="cbtn cb-dn" onclick="cloudPull()" title="Charger depuis le cloud">☁️↓</button>
-      <button class="cbtn" onclick="jbSetup()" title="Configurer le cloud" style="font-size:11px;">⚙️</button>
+      
       <button class="btn btn-info" onclick="exportJSON()" title="Exporter données">📤</button>
       <label class="btn btn-ok" style="cursor:pointer;" title="Importer données">
         📥 <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)"/>
@@ -486,23 +486,10 @@ const PROD_COLOR_NAMES = {
 const SK = {C:"cm-c-v8",O:"cm-o-v8",CL:"cm-cl-v8",M:"cm-m-v8",JB:"cm-jb-cfg"};
 /* ═══ JSONBIN CONFIG ═══ */
 function jbCfg(){
-  try{ return JSON.parse(localStorage.getItem(SK.JB))||{binId:"",apiKey:""}; }
-  catch(e){ return {binId:"",apiKey:""}; }
-}
-function jbSaveCfg(binId, apiKey){
-  localStorage.setItem(SK.JB, JSON.stringify({binId, apiKey}));
-}
-function jbSetup(){
-  const cfg = jbCfg();
-  const binId = prompt("☁️ Configuration Cloud\n\nBin ID jsonbin.io :", cfg.binId||"");
-  if(binId===null) return;
-  const apiKey = prompt("API Key (Master Key) :", cfg.apiKey||"");
-  if(apiKey===null) return;
-  jbSaveCfg(binId.trim(), apiKey.trim());
-  showToast("☁️ Cloud configuré !");
-  const _cfg=jbCfg();
-if(_cfg.binId&&_cfg.apiKey){ showSyncStatus("idle"); }
-else{ showSyncStatus("err","⚙️ Config"); }
+  return {
+    binId: "6a26bb96da38895dfe99d852",
+    apiKey: "$2a$10$v2aLTG.8ynIQWFq8qUc6uezqZhEuJTPAxZzDaN7LcihD9MB5xmskq"
+  };
 }
 
 let jbSyncing = false;
@@ -518,7 +505,7 @@ function setLocalTs(){
 /* ── PUSH : envoyer vers le cloud ── */
 async function cloudPush(){
   const cfg = jbCfg();
-  if(!cfg.binId||!cfg.apiKey){ jbSetup(); return; }
+  if(!cfg.binId||!cfg.apiKey){ showToast("⚠ Cloud non configuré"); return; }
   if(jbSyncing) return;
   jbSyncing = true;
   showSyncStatus("syncing");
@@ -547,7 +534,7 @@ async function cloudPush(){
 /* ── PULL : charger depuis le cloud ── */
 async function cloudPull(){
   const cfg = jbCfg();
-  if(!cfg.binId||!cfg.apiKey){ jbSetup(); return; }
+  if(!cfg.binId||!cfg.apiKey){ showToast("⚠ Cloud non configuré"); return; }
   showSyncStatus("syncing");
   try{
     const res = await fetch("https://api.jsonbin.io/v3/b/"+cfg.binId+"/latest",{
@@ -1151,9 +1138,7 @@ initGrpBar();
 renderN();
 go("home",document.querySelector(".tab"));
 initSupSelect();
-const _cfg=jbCfg();
-if(_cfg.binId&&_cfg.apiKey){ showSyncStatus("idle"); }
-else{ showSyncStatus("err","⚙️ Config"); }
+showSyncStatus("idle");
 // Persistent event delegation for quick-delete on order cards
 document.addEventListener("click", function(e){
   const btn = e.target.closest(".oc-del-btn");
