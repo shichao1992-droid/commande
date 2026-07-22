@@ -148,6 +148,20 @@ input,select,button{font-family:var(--font);}
 .ol-qty input{width:100%;padding:5px 6px;font-size:13px;border-radius:var(--rs);border:1px solid var(--bd2);background:var(--s);color:var(--t);text-align:center;}
 .ol-rm{background:none;border:none;color:var(--err);cursor:pointer;font-size:18px;line-height:1;padding:0;}
 .empty-ol{text-align:center;padding:20px;color:var(--t3);font-size:13px;}
+.prod-img-wrap{display:flex;gap:12px;align-items:flex-start;margin-top:8px;}
+.prod-img{width:90px;height:90px;border-radius:var(--rs);object-fit:cover;border:1px solid var(--bd);background:var(--s2);cursor:pointer;}
+.prod-img-ph{width:90px;height:90px;border-radius:var(--rs);border:2px dashed var(--bd2);display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:11px;cursor:pointer;text-align:center;padding:4px;}
+.oc-img{width:48px;height:48px;border-radius:var(--rs);object-fit:cover;border:1px solid var(--bd);flex-shrink:0;}
+.oc-overdue{font-size:10px;font-weight:600;color:var(--err);padding:2px 8px;background:var(--err-bg);border:1px solid var(--err-bd);border-radius:4px;margin-bottom:2px;display:inline-block;}
+.oc-soon{font-size:10px;font-weight:600;color:var(--warn);padding:2px 8px;background:var(--warn-bg);border:1px solid var(--warn-bd);border-radius:4px;margin-bottom:2px;display:inline-block;}
+.oc-edit-btn{background:none;border:none;border-left:1px solid var(--bd);color:var(--t3);cursor:pointer;font-size:14px;padding:0 10px;transition:all .15s;flex-shrink:0;}
+.oc-edit-btn:hover{background:var(--info-bg);color:var(--info);}
+.oc-img-btn{background:none;border:none;border-left:1px solid var(--bd);color:var(--t3);cursor:pointer;font-size:14px;padding:0 10px;transition:all .15s;flex-shrink:0;}
+.oc-img-btn:hover{background:var(--ok-bg);color:var(--ok);}
+.edit-banner{background:var(--info-bg);border:1px solid var(--info-bd);color:var(--info);padding:8px 14px;border-radius:var(--rs);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500;}
+.sort-btns{display:flex;gap:4px;}
+.sort-btn{padding:3px 8px;border-radius:12px;border:1px solid var(--bd);background:transparent;color:var(--t2);font-size:10px;cursor:pointer;transition:all .15s;}
+.sort-btn.active{background:var(--t);color:var(--s);border-color:var(--t);}
 .cmd-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px;}
 
 /* NUANCIER */
@@ -197,6 +211,8 @@ input,select,button{font-family:var(--font);}
 .toast.show{opacity:1;transform:translateY(0);}
 
 @media(max-width:540px){
+  .prod-img-wrap{flex-direction:column-reverse;}
+  .prod-img,.prod-img-ph{width:100%;height:120px;}
   .nav-top,.n-toolbar,.grp-bar,.ncontent,.page{padding-left:12px;padding-right:12px;}
   .ncards{grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:5px;}
   .ol{grid-template-columns:28px 1fr 68px 22px;}
@@ -225,6 +241,7 @@ input,select,button{font-family:var(--font);}
     <button class="tab" onclick="go('cmd',this)">Commande</button>
     <button class="tab" onclick="go('nuancier',this)">Nuancier</button>
     <button class="tab" onclick="go('clients',this)">Clients</button>
+    <button class="tab" onclick="go('catalogue',this)">Catalogue</button>
   </div>
 </div>
 
@@ -234,7 +251,13 @@ input,select,button{font-family:var(--font);}
     <div class="kpis" id="kpis"></div>
     <div class="hist-top">
       <div class="hfs" id="hfs"></div>
-      <button class="btn btn-info" onclick="exportAllXlsx()">📥 Excel</button>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <div class="sort-btns">
+          <button class="sort-btn active" id="sb-date" onclick="setSort('date')">📅 Date</button>
+          <button class="sort-btn" id="sb-dlv" onclick="setSort('dlv')">📦 Livraison</button>
+        </div>
+        <button class="btn btn-info" onclick="exportAllXlsx()">📥 Excel</button>
+      </div>
     </div>
     <div class="ocards" id="ocards"></div>
   </div>
@@ -246,14 +269,30 @@ input,select,button{font-family:var(--font);}
     <!-- Client -->
     <div class="client-tabs" id="ctabs"></div>
 
+    <!-- Edit banner -->
+    <div class="edit-banner" id="edit-banner" style="display:none">
+      <span>✏️ Mode modification — <span id="edit-ref"></span></span>
+      <button class="btn" onclick="cancelEdit()" style="padding:3px 10px;font-size:11px;">✕ Annuler</button>
+    </div>
+
     <!-- Produit + date -->
     <div class="card">
       <div class="card-title">Produit / 商品</div>
-      <div class="row">
-        <div class="fld" style="max-width:170px;"><label>Référence 编号</label><input id="c-ref" placeholder="25730…" oninput="onRef()" autocomplete="off"/></div>
-        <div class="fld"><label>Description 描述</label><input id="c-desc" placeholder="Short TU44-50…"/></div>
-        <div class="fld" style="max-width:160px;"><label>Livraison 收货日期</label><input type="date" id="c-dlv"/></div>
-        <div class="fld" style="max-width:170px;"><label>Fournisseur 供应商</label><select id="c-sup"><option value="">— Sélectionner —</option></select></div>
+      <div class="prod-img-wrap">
+        <div style="flex:1;">
+          <div class="row">
+            <div class="fld" style="max-width:170px;"><label>Référence 编号</label><input id="c-ref" placeholder="25730…" oninput="onRef()" autocomplete="off"/></div>
+            <div class="fld"><label>Description 描述</label><input id="c-desc" placeholder="Short TU44-50…"/></div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <div class="fld" style="max-width:160px;"><label>Livraison 收货日期</label><input type="date" id="c-dlv"/></div>
+            <div class="fld" style="max-width:170px;"><label>Fournisseur 供应商</label><select id="c-sup"><option value="">— Sélectionner —</option></select></div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <div class="fld"><label>📷 URL photo produit</label><input id="c-img" placeholder="https://…" oninput="onImgUrl()"/></div>
+          </div>
+        </div>
+        <div id="c-img-preview" onclick="document.getElementById('c-img').focus()"><div class="prod-img-ph">📷 Coller<br>une URL</div></div>
       </div>
       <div class="dupli" id="dupli"></div>
     </div>
@@ -315,6 +354,49 @@ input,select,button{font-family:var(--font);}
         <div class="fld" style="max-width:150px;"><label>Type</label><select id="nc-t"><option value="boutique">🏪 Boutique</option><option value="maison">🏠 Maison</option><option value="autre">📦 Autre</option></select></div>
         <button class="btn btn-ok" style="align-self:flex-end" onclick="addClient()">+ Ajouter</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- CATALOGUE -->
+<div id="v-catalogue" style="display:none">
+  <div class="page">
+    <div style="font-size:15px;font-weight:600;margin-bottom:14px;">Catalogue produits / 产品目录</div>
+
+    <div class="card">
+      <div class="card-title">Importer Excel 导入表格</div>
+      <div class="hint" style="margin-bottom:8px;">Colonnes attendues : Référence, Nom, Catégorie, Couleur, Type (COVER/PRODUIT), N°, URL Image</div>
+      <label class="btn btn-ok" style="cursor:pointer;display:inline-flex;">
+        📥 Choisir un fichier Excel
+        <input type="file" id="cat-imp" accept=".xlsx,.xls" style="display:none" onchange="importCatalogExcel(event)"/>
+      </label>
+      <div id="cat-imp-status" style="margin-top:10px;font-size:12px;color:var(--t2);"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">État actuel / 目前状态</div>
+      <div id="cat-stats" style="font-size:13px;color:var(--t2);"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Synchronisation GitHub</div>
+      <div class="row">
+        <div class="fld"><label>Owner (compte GitHub)</label><input id="gh-owner" placeholder="shichao1992-droid"/></div>
+        <div class="fld"><label>Repo</label><input id="gh-repo" placeholder="commande"/></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="fld"><label>Fichier</label><input id="gh-path" placeholder="products.json"/></div>
+        <div class="fld" style="max-width:110px;"><label>Branche</label><input id="gh-branch" placeholder="main"/></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="fld"><label>Token GitHub (accès Contents)</label><input id="gh-token" type="password" placeholder="ghp_…"/></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn" onclick="saveGhCfg()">💾 Enregistrer config</button>
+        <button class="btn btn-info" onclick="pullCatalogFromGitHub(false)">☁️↓ Charger depuis GitHub</button>
+        <button class="btn btn-ok" onclick="pushCatalogToGitHub()">☁️↑ Pousser vers GitHub</button>
+      </div>
+      <div id="gh-status" style="margin-top:10px;font-size:12px;color:var(--t2);"></div>
     </div>
   </div>
 </div>
@@ -485,11 +567,29 @@ const PROD_COLOR_NAMES = {
 
 const SK = {C:"cm-c-v8",O:"cm-o-v8",CL:"cm-cl-v8",M:"cm-m-v8",JB:"cm-jb-cfg"};
 /* ═══ JSONBIN CONFIG ═══ */
-function jbCfg(){
-  return {
-    binId: "6a26bb96da38895dfe99d852",
-    apiKey: "$2a$10$v2aLTG.8ynIQWFq8qUc6uezqZhEuJTPAxZzDaN7LcihD9MB5xmskq"
-  };
+const JB_KEY = "$2a$10$v2aLTG.8ynIQWFq8qUc6uezqZhEuJTPAxZzDaN7LcihD9MB5xmskq";
+const JB_BINS = {
+  orders:  "6a26bb96da38895dfe99d852",
+  colors:  "6a2bc7a7f5f4af5e29e51f08",
+  clients: "6a2bc83ff5f4af5e29e52205",
+  images:  "6a2bc850da38895dfeb39ba4",
+  backup:  "6a2bc866da38895dfeb39bfb"
+};
+async function jbPut(binId, data){
+  const res = await fetch("https://api.jsonbin.io/v3/b/"+binId,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json","X-Master-Key":JB_KEY},
+    body:JSON.stringify(data)
+  });
+  return res;
+}
+async function jbGet(binId){
+  const res = await fetch("https://api.jsonbin.io/v3/b/"+binId+"/latest",{
+    headers:{"X-Master-Key":JB_KEY}
+  });
+  if(!res.ok) return null;
+  const json = await res.json();
+  return json.record;
 }
 
 let jbSyncing = false;
@@ -502,79 +602,101 @@ function setLocalTs(){
   return ts;
 }
 
-/* ── PUSH : envoyer vers le cloud ── */
+/* ── PUSH : envoyer vers le cloud (5 bins) ── */
 async function cloudPush(){
-  const cfg = jbCfg();
-  if(!cfg.binId||!cfg.apiKey){ showToast("⚠ Cloud non configuré"); return; }
   if(jbSyncing) return;
   jbSyncing = true;
   showSyncStatus("syncing");
+  const ts = new Date().toISOString();
+  let ok=0, fail=0;
   try{
-    const ts = new Date().toISOString();
-    const payload = {COLORS,ORDERS,CLIENTS,MEM,_v:"v8",_d:ts,
-      _stats:{orders:ORDERS.length,colors:COLORS.length,clients:CLIENTS.length}};
-    const res = await fetch("https://api.jsonbin.io/v3/b/"+cfg.binId,{
-      method:"PUT",
-      headers:{"Content-Type":"application/json","X-Master-Key":cfg.apiKey,"X-Bin-Versioning":"false"},
-      body: JSON.stringify(payload)
+    // Strip base64 images (too heavy for cloud)
+    const cleanOrders = ORDERS.map(o=>{
+      if(o.imageUrl && o.imageUrl.startsWith("data:")) return {...o, imageUrl:undefined};
+      return o;
     });
-    if(res.ok){
-      localStorage.setItem("cm-last-sync", ts);
+    const cleanImages = {};
+    for(const [ref,url] of Object.entries(PROD_IMAGES)){
+      if(!url.startsWith("data:")) cleanImages[ref]=url;
+    }
+    const b64count = Object.keys(PROD_IMAGES).length - Object.keys(cleanImages).length;
+    if(b64count) console.warn(b64count+" image(s) base64 ignorée(s) — utiliser des URLs");
+    const tasks = [
+      {name:"orders",  bin:JB_BINS.orders,  data:{ORDERS:cleanOrders,_d:ts}},
+      {name:"colors",  bin:JB_BINS.colors,  data:{COLORS,_d:ts}},
+      {name:"clients", bin:JB_BINS.clients, data:{CLIENTS,MEM,_d:ts}},
+      {name:"images",  bin:JB_BINS.images,  data:{PROD_IMAGES:cleanImages,_d:ts}},
+    ];
+    const results = await Promise.allSettled(tasks.map(t=>jbPut(t.bin,t.data)));
+    results.forEach((r,i)=>{
+      if(r.status==="fulfilled"&&r.value.ok) ok++;
+      else{ fail++; console.error("Push "+tasks[i].name+" failed:", r); }
+    });
+    if(ok===4){
+      // All 4 OK → backup
       showSyncStatus("ok");
-      showToast("☁️↑ Sauvegardé — "+ORDERS.length+" cmd, "+COLORS.length+" couleurs");
+      localStorage.setItem("cm-last-sync", ts);
+      showToast("☁️↑ Sauvegardé ("+ORDERS.length+" cmd, "+COLORS.length+" couleurs)"+(b64count?" ⚠️ "+b64count+" photo(s) base64 ignorée(s)":""));
+      // Backup silencieux (bin 5)
+      jbPut(JB_BINS.backup,{COLORS,ORDERS:cleanOrders,CLIENTS,MEM,PROD_IMAGES:cleanImages,_v:"v9",_d:ts}).catch(()=>{});
     } else {
-      const err = await res.text();
-      showSyncStatus("err","Erreur "+res.status);
-      console.error("cloudPush error:", res.status, err);
+      showSyncStatus("err","Erreur "+fail+"/4");
+      showToast("⚠ "+ok+"/4 bins OK, "+fail+" échoué(s)");
     }
   }catch(e){ showSyncStatus("err","Hors ligne"); console.error(e); }
   finally{ jbSyncing=false; }
 }
 
-/* ── PULL : charger depuis le cloud ── */
+/* ── PULL : charger depuis le cloud (5 bins) ── */
 async function cloudPull(){
-  const cfg = jbCfg();
-  if(!cfg.binId||!cfg.apiKey){ showToast("⚠ Cloud non configuré"); return; }
   showSyncStatus("syncing");
   try{
-    const res = await fetch("https://api.jsonbin.io/v3/b/"+cfg.binId+"/latest",{
-      headers:{"X-Master-Key":cfg.apiKey}
-    });
-    if(!res.ok){
-      showSyncStatus("err","Erreur "+res.status);
-      console.error("cloudPull error:", res.status);
-      return;
-    }
-    const json = await res.json();
-    const d = json.record;
-    if(!d||(!d.ORDERS&&!d.COLORS)){
-      showToast("⚠ Bin vide ou invalide");
-      showSyncStatus("err","Vide");
-      return;
-    }
+    const [dOrd, dCol, dCli, dImg] = await Promise.all([
+      jbGet(JB_BINS.orders),
+      jbGet(JB_BINS.colors),
+      jbGet(JB_BINS.clients),
+      jbGet(JB_BINS.images),
+    ]);
 
-    const cloudDate = d._d||"";
+    const cloudDate = dOrd?._d || dCol?._d || "";
     const myDate = localTs();
-    const nb = (d.ORDERS||[]).length;
-    const nc = (d.COLORS||[]).length;
+    const nbOrd = (dOrd?.ORDERS||[]).length;
+    const nbCol = (dCol?.COLORS||[]).length;
     const cdFmt = fmtDateTime(cloudDate);
     const myFmt = fmtDateTime(myDate);
 
     let msg = "☁️ Charger depuis le cloud ?\n\n";
-    msg += "Cloud : "+cdFmt+" — "+nb+" cmd, "+nc+" couleurs\n";
+    msg += "Cloud : "+cdFmt+" — "+nbOrd+" cmd, "+nbCol+" couleurs\n";
     msg += "Local : "+myFmt+" — "+ORDERS.length+" cmd, "+COLORS.length+" couleurs\n";
     if(myDate && cloudDate < myDate){
       msg += "\n⚠️ ATTENTION : le cloud est PLUS ANCIEN !\n";
     }
     msg += "\nRemplacer les données locales ?";
     if(!confirm(msg)) return;
-    applyCloudData(d);
-    showToast("☁️ Chargé — "+nb+" cmd, "+nc+" couleurs");
+
+    if(dOrd?.ORDERS) ORDERS=dOrd.ORDERS;
+    if(dCol?.COLORS){COLORS=dCol.COLORS;COLORS.forEach(c=>{if(!c.zh)c.zh="";if(!c.group)c.group="Autres";});}
+    if(dCli?.CLIENTS) CLIENTS=dCli.CLIENTS;
+    if(dCli?.MEM) MEM=dCli.MEM;
+    if(dImg?.PROD_IMAGES){Object.assign(PROD_IMAGES,dImg.PROD_IMAGES);saveImages();}
+
+    const ts = cloudDate||new Date().toISOString();
+    localStorage.setItem("cm-local-ts", ts);
+    localStorage.setItem("cm-last-sync", ts);
+    save();
+    renderAll();
+    showToast("☁️↓ Chargé — "+nbOrd+" cmd, "+nbCol+" couleurs");
     showSyncStatus("ok");
 
   }catch(e){
     showSyncStatus("err","Hors ligne");
     console.error("cloudPull:", e);
+    // Fallback: try backup bin
+    try{
+      showToast("⏳ Essai bin backup…");
+      const bk = await jbGet(JB_BINS.backup);
+      if(bk) { applyCloudData(bk); showToast("☁️ Backup chargé"); showSyncStatus("ok"); }
+    }catch(e2){ console.error("Backup also failed:", e2); }
   }
 }
 
@@ -583,6 +705,7 @@ function applyCloudData(d){
   if(d.ORDERS)ORDERS=d.ORDERS;
   if(d.CLIENTS)CLIENTS=d.CLIENTS;
   if(d.MEM)MEM=d.MEM;
+  if(d.PROD_IMAGES){Object.assign(PROD_IMAGES,d.PROD_IMAGES);saveImages();}
   const ts = d._d||new Date().toISOString();
   localStorage.setItem("cm-local-ts", ts);
   localStorage.setItem("cm-last-sync", ts);
@@ -623,6 +746,180 @@ let COLORS=[],ORDERS=[],CLIENTS=[],MEM={};
 let OL=[]; // order lines draft
 let activeClient="";
 let histFilter="all";
+let sortMode="date"; // "date" or "dlv"
+let editingOrderId=null; // if editing an existing order
+const PROD_IMAGES=JSON.parse(localStorage.getItem("cm-prod-img")||"{}"); // {ref: url}
+function saveImages(){localStorage.setItem("cm-prod-img",JSON.stringify(PROD_IMAGES));}
+
+/* ═══ CATALOGUE PRODUITS (import Excel + sync GitHub) ═══ */
+let CATALOG=(function(){try{return JSON.parse(localStorage.getItem("cm-catalog")||"null")||{refs:{},_v:"cat1",_d:""};}catch(e){return {refs:{},_v:"cat1",_d:""};}})();
+function saveCatalogLocal(){localStorage.setItem("cm-catalog",JSON.stringify(CATALOG));}
+
+function ghCfg(){
+  try{return JSON.parse(localStorage.getItem("cm-gh-cfg")||"null")||{owner:"",repo:"",token:"",path:"products.json",branch:"main"};}
+  catch(e){return {owner:"",repo:"",token:"",path:"products.json",branch:"main"};}
+}
+function saveGhCfg(){
+  const cfg={
+    owner:document.getElementById("gh-owner").value.trim(),
+    repo:document.getElementById("gh-repo").value.trim(),
+    token:document.getElementById("gh-token").value.trim(),
+    path:document.getElementById("gh-path").value.trim()||"products.json",
+    branch:document.getElementById("gh-branch").value.trim()||"main"
+  };
+  localStorage.setItem("cm-gh-cfg",JSON.stringify(cfg));
+  showToast("💾 Config GitHub enregistrée");
+}
+function fillGhCfgInputs(){
+  const cfg=ghCfg();
+  const map={"gh-owner":cfg.owner,"gh-repo":cfg.repo,"gh-token":cfg.token,"gh-path":cfg.path,"gh-branch":cfg.branch};
+  Object.entries(map).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v||"";});
+}
+
+function findOrCreateColorId(labelRaw,createdSet){
+  const label=(labelRaw||"").toString().trim();
+  if(!label)return null;
+  const n=nrm(label);
+  let c=COLORS.find(x=>nrm(x.name)===n);
+  if(c)return c.id;
+  const id="cat_"+n.replace(/[^a-z0-9]+/g,"_").slice(0,24)+"_"+Math.random().toString(36).slice(2,6);
+  const title=label.charAt(0).toUpperCase()+label.slice(1).toLowerCase();
+  COLORS.push({id,name:title,zh:"",hex:"#CCCCCC",group:"À vérifier (import)"});
+  if(createdSet)createdSet.add(id);
+  return id;
+}
+
+function parseCatalogWorkbook(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=(e)=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+        const refs={};
+        const created=new Set();
+        for(let i=1;i<rows.length;i++){
+          const row=rows[i];
+          const ref=(row[0]||"").toString().trim();
+          if(!ref)continue;
+          const nom=(row[1]||"").toString().trim();
+          const cat=(row[2]||"").toString().trim();
+          const coul=(row[3]||"").toString().trim();
+          const typ=(row[4]||"").toString().trim().toUpperCase();
+          const url=(row[6]||"").toString().trim();
+          if(!refs[ref])refs[ref]={nom,cat,cover:"",colors:{}};
+          if(!refs[ref].nom&&nom)refs[ref].nom=nom;
+          if(typ==="COVER"){
+            if(url)refs[ref].cover=url;
+          } else if(typ==="PRODUIT"&&coul){
+            const cid=findOrCreateColorId(coul,created);
+            if(cid){
+              if(!refs[ref].colors[cid])refs[ref].colors[cid]={label:coul.toUpperCase(),urls:[]};
+              if(url&&!refs[ref].colors[cid].urls.includes(url))refs[ref].colors[cid].urls.push(url);
+            }
+          }
+        }
+        resolve({refs,created});
+      }catch(err){reject(err);}
+    };
+    reader.onerror=()=>reject(new Error("Lecture fichier échouée"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function importCatalogExcel(e){
+  const file=e.target.files[0];if(!file)return;
+  const statusEl=document.getElementById("cat-imp-status");
+  statusEl.textContent="⏳ Import en cours…";
+  try{
+    if(typeof XLSX==="undefined"){statusEl.textContent="⏳ Chargement de la librairie, réessayez dans 1s…";setTimeout(()=>importCatalogExcel(e),1200);return;}
+    const {refs,created}=await parseCatalogWorkbook(file);
+    CATALOG={refs,_v:"cat1",_d:new Date().toISOString()};
+    saveCatalogLocal();
+    save(); // persist COLORS (nouvelles couleurs éventuelles)
+    renderCatalogTab();
+    const nbRefs=Object.keys(refs).length;
+    statusEl.textContent=`✅ ${nbRefs} produits importés — ${created.size} nouvelle(s) couleur(s) créée(s) (à vérifier dans Nuancier)`;
+    showToast(`✅ Catalogue importé — ${nbRefs} produits`);
+    if(created.size)renderN();
+  }catch(err){
+    console.error(err);
+    statusEl.textContent="⚠ Erreur de lecture du fichier Excel";
+  }
+  e.target.value="";
+}
+
+function renderCatalogTab(){
+  fillGhCfgInputs();
+  const nbRefs=Object.keys(CATALOG.refs||{}).length;
+  const statsEl=document.getElementById("cat-stats");
+  if(statsEl){
+    statsEl.innerHTML=nbRefs
+      ? `${nbRefs} produits en catalogue — dernière mise à jour : ${CATALOG._d?fmtDate(CATALOG._d):"—"}`
+      : `Aucun catalogue chargé pour l'instant.`;
+  }
+}
+
+async function pushCatalogToGitHub(){
+  const cfg=ghCfg();
+  const statusEl=document.getElementById("gh-status");
+  if(!cfg.owner||!cfg.repo||!cfg.token){statusEl.textContent="⚠ Renseignez owner / repo / token d'abord";return;}
+  statusEl.textContent="⏳ Envoi vers GitHub…";
+  try{
+    const apiUrl=`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodeURIComponent(cfg.path)}`;
+    let sha;
+    try{
+      const getRes=await fetch(apiUrl+`?ref=${encodeURIComponent(cfg.branch)}`,{
+        headers:{Authorization:"Bearer "+cfg.token,Accept:"application/vnd.github+json"}
+      });
+      if(getRes.ok){const j=await getRes.json();sha=j.sha;}
+    }catch(e){}
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(CATALOG))));
+    const body={message:"Update products.json — "+new Date().toISOString(),content,branch:cfg.branch};
+    if(sha)body.sha=sha;
+    const putRes=await fetch(apiUrl,{
+      method:"PUT",
+      headers:{Authorization:"Bearer "+cfg.token,Accept:"application/vnd.github+json","Content-Type":"application/json"},
+      body:JSON.stringify(body)
+    });
+    if(putRes.ok){
+      statusEl.textContent="✅ Catalogue poussé sur GitHub avec succès";
+      showToast("☁️↑ Catalogue synchronisé sur GitHub");
+    } else {
+      const t=await putRes.text();
+      console.error("GitHub push error:",putRes.status,t);
+      statusEl.textContent="⚠ Erreur GitHub ("+putRes.status+")";
+    }
+  }catch(err){
+    console.error(err);
+    statusEl.textContent="⚠ Erreur réseau lors de l'envoi";
+  }
+}
+
+async function pullCatalogFromGitHub(silent){
+  const cfg=ghCfg();
+  const statusEl=document.getElementById("gh-status");
+  if(!cfg.owner||!cfg.repo){if(!silent&&statusEl)statusEl.textContent="⚠ Renseignez owner / repo d'abord";return;}
+  try{
+    const url=`https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
+    const res=await fetch(url);
+    if(!res.ok){if(!silent&&statusEl)statusEl.textContent="⚠ Fichier introuvable sur GitHub ("+res.status+")";return;}
+    const data=await res.json();
+    if(data&&data.refs){
+      CATALOG=data;
+      saveCatalogLocal();
+      if(!silent){
+        if(statusEl)statusEl.textContent=`✅ Catalogue chargé — ${Object.keys(data.refs).length} produits`;
+        showToast("☁️↓ Catalogue chargé depuis GitHub");
+      }
+      renderCatalogTab();
+    }
+  }catch(err){
+    console.error(err);
+    if(!silent&&statusEl)statusEl.textContent="⚠ Erreur de chargement depuis GitHub";
+  }
+}
 let histSupFilter="";
 let editingColor=null, editingCL=null;
 let freeSrchVal="";
@@ -646,7 +943,7 @@ function save(){
 
 /* ═══ EXPORT / IMPORT ═══ */
 function exportJSON(){
-  const blob=new Blob([JSON.stringify({COLORS,ORDERS,CLIENTS,MEM,_v:"v8",_d:new Date().toISOString()},null,2)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({COLORS,ORDERS,CLIENTS,MEM,PROD_IMAGES,_v:"v9",_d:new Date().toISOString()},null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="cmelodie-data.json";a.click();
   showToast("📤 Exporté — partagez le fichier vers vos autres appareils");
 }
@@ -663,6 +960,7 @@ function importJSON(e){
       if(d.ORDERS)ORDERS=d.ORDERS;
       if(d.CLIENTS){CLIENTS=d.CLIENTS;if(!activeClient&&CLIENTS.length)activeClient=CLIENTS[0].id;}
       if(d.MEM)MEM=d.MEM;
+      if(d.PROD_IMAGES){Object.assign(PROD_IMAGES,d.PROD_IMAGES);saveImages();}
       save();refreshAll();
       showToast("✅ "+nb+" commandes importées");
     }catch(err){showToast("⚠ Erreur lecture fichier");}
@@ -692,7 +990,7 @@ function colorLabel(cid,ref){
 
 /* ═══ TABS ═══ */
 function go(t,el){
-  ["home","cmd","nuancier","clients"].forEach(v=>document.getElementById("v-"+v).style.display="none");
+  ["home","cmd","nuancier","clients","catalogue"].forEach(v=>document.getElementById("v-"+v).style.display="none");
   document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
   document.getElementById("v-"+t).style.display="block";
   el.classList.add("active");
@@ -700,13 +998,39 @@ function go(t,el){
   if(t==="cmd"){renderCtabs();onRef();initSupSelect();}
   if(t==="nuancier")renderN();
   if(t==="clients")renderClients();
+  if(t==="catalogue")renderCatalogTab();
 }
 
 /* ═══ HOME ═══ */
 function filtOrd(){
   let list=histFilter==="all"?ORDERS:ORDERS.filter(o=>o.clientId===histFilter);
   if(histSupFilter)list=list.filter(o=>o.supplier===histSupFilter);
+  if(sortMode==="dlv"){
+    list=[...list].sort((a,b)=>{
+      const ad=a.deliveryDate||"9999",bd=b.deliveryDate||"9999";
+      if(ad!==bd)return ad.localeCompare(bd);
+      return new Date(b.date)-new Date(a.date);
+    });
+  }
   return list;
+}
+function isOverdue(o){
+  if(o.received||!o.deliveryDate)return false;
+  const today=new Date();today.setHours(0,0,0,0);
+  return new Date(o.deliveryDate+"T23:59:59")<today;
+}
+function isSoon(o){
+  if(o.received||!o.deliveryDate)return false;
+  const today=new Date();today.setHours(0,0,0,0);
+  const dlv=new Date(o.deliveryDate+"T23:59:59");
+  const diff=(dlv-today)/(1000*60*60*24);
+  return diff>=0&&diff<=3;
+}
+function setSort(mode){
+  sortMode=mode;
+  document.getElementById("sb-date").className="sort-btn"+(mode==="date"?" active":"");
+  document.getElementById("sb-dlv").className="sort-btn"+(mode==="dlv"?" active":"");
+  renderHome();
 }
 function renderHome(){
   const list=filtOrd();
@@ -734,25 +1058,33 @@ function renderHome(){
   if(!list.length){el.innerHTML=`<div class="no-data">Aucune commande — 暂无订单</div>`;return;}
   el.innerHTML=list.map(o=>{
     const t=o.lines.reduce((s,l)=>s+l.qty,0);
-    const isR=!!o.received,hasDlv=!!o.deliveryDate,fut=hasDlv&&isFuture(o.deliveryDate)&&!isR;
-    const strp=isR?"r":hasDlv?"p":"";
+    const isR=!!o.received,hasDlv=!!o.deliveryDate;
+    const over=isOverdue(o),soon=isSoon(o);
+    const strp=isR?"r":over?"overdue":hasDlv?"p":"";
     const sb=isR?`<span class="badge b-r">✓ ${o.receivedDate?fmtDay(o.receivedDate):""}</span>`:hasDlv?`<span class="badge b-p">📦 ${fmtDay(o.deliveryDate)}</span>`:"";
+    const imgUrl=o.imageUrl||PROD_IMAGES[o.ref]||"";
+    const alertHtml=over?`<span class="oc-overdue">🔴 EN RETARD — prévu ${fmtDay(o.deliveryDate)}</span> `:soon?`<span class="oc-soon">🟡 Bientôt — prévu ${fmtDay(o.deliveryDate)}</span> `:"";
     return `<div class="oc">
       <div style="display:flex;align-items:stretch;">
       <div class="oc-hdr" style="flex:1;" onclick="document.getElementById('ob-${o.id}').classList.toggle('open')">
-        <div class="stripe ${strp}"></div>
-        <div class="oc-main">
-          <div class="oc-top">
-            <div><div class="oc-ref">${o.ref}</div><div class="oc-desc">${o.desc||""}</div></div>
-            <div class="badges"><span class="badge b-cl">${o.clientName||o.clientId}</span>${o.supplier?`<span class="badge" style="background:var(--info-bg);color:var(--info);border:1px solid var(--info-bd)">${o.supplier}</span>`:""}<span class="badge b-n">${t} pcs</span>${sb}</div>
-          </div>
-          <div class="oc-meta">
-            <span>${fmtDate(o.date)}</span>${o.lines.slice(0,5).map(l=>`<span><span class="dot-sw" style="background:${l.hex}"></span>${l.colorNameFr}</span>`).join("")}
-            ${o.lines.length>5?`<span>+${o.lines.length-5}</span>`:""}
+        <div class="stripe ${strp}" ${over?'style="background:var(--err-bd)"':""} ></div>
+        <div class="oc-main" style="display:flex;gap:10px;align-items:center;">
+          ${imgUrl?`<img class="oc-img" src="${imgUrl}" onerror="this.style.display='none'"/>`:""} 
+          <div style="flex:1;min-width:0;">
+            <div class="oc-top">
+              <div>${alertHtml}<div class="oc-ref">${o.ref}</div><div class="oc-desc">${o.desc||""}</div></div>
+              <div class="badges"><span class="badge b-cl">${o.clientName||o.clientId}</span>${o.supplier?`<span class="badge" style="background:var(--info-bg);color:var(--info);border:1px solid var(--info-bd)">${o.supplier}</span>`:""}<span class="badge b-n">${t} pcs</span>${sb}</div>
+            </div>
+            <div class="oc-meta">
+              <span>${fmtDate(o.date)}</span>${o.lines.slice(0,5).map(l=>`<span><span class="dot-sw" style="background:${l.hex}"></span>${l.colorNameFr}</span>`).join("")}
+              ${o.lines.length>5?`<span>+${o.lines.length-5}</span>`:""}
+            </div>
           </div>
         </div>
       </div>
-      <button class="oc-del-btn" data-id="${o.id}" title="Supprimer cette commande">🗑</button>
+      <button class="oc-img-btn" data-imgexp="${o.id}" title="Image commande 生成订单确认图">🖼️</button>
+      <button class="oc-edit-btn" data-edit="${o.id}" title="Modifier">✏️</button>
+      <button class="oc-del-btn" data-id="${o.id}" title="Supprimer">🗑</button>
       </div>
       <div class="oc-body" id="ob-${o.id}">
         <div class="dgrid">
@@ -777,6 +1109,52 @@ function markRec(id){const o=ORDERS.find(x=>x.id===id);if(!o)return;o.received=t
 function unmarkRec(id){const o=ORDERS.find(x=>x.id===id);if(!o)return;delete o.received;delete o.receivedDate;save();renderHome();showToast("Annulé");}
 function delOrder(id){if(!confirm("Supprimer ?"))return;ORDERS=ORDERS.filter(o=>o.id!==id);save();renderHome();showToast("Supprimé");}
 
+function editOrder(id){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;
+  editingOrderId=id;
+  // Switch to cmd tab
+  go("cmd",document.querySelectorAll(".tab")[1]);
+  // Fill fields
+  setClient(o.clientId);
+  document.getElementById("c-ref").value=o.ref;
+  document.getElementById("c-desc").value=o.desc||"";
+  document.getElementById("c-dlv").value=o.deliveryDate||"";
+  const supSel=document.getElementById("c-sup");
+  supSel.value=o.supplier||"";
+  // Image
+  const imgUrl=o.imageUrl||PROD_IMAGES[o.ref]||"";
+  document.getElementById("c-img").value=imgUrl;
+  onImgUrl();
+  // Lines
+  OL=JSON.parse(JSON.stringify(o.lines));
+  renderOL();
+  // Show edit banner
+  document.getElementById("edit-banner").style.display="flex";
+  document.getElementById("edit-ref").textContent=o.ref+" — "+cname(o.clientId);
+  // Change validate button
+  document.querySelector(".cmd-foot .btn-ok").innerHTML="✏️ Modifier la commande";
+  onRef();
+}
+
+function cancelEdit(){
+  editingOrderId=null;
+  document.getElementById("edit-banner").style.display="none";
+  document.querySelector(".cmd-foot .btn-ok").innerHTML="✅ Valider";
+  clearCmd();
+}
+
+function onImgUrl(){
+  const url=document.getElementById("c-img").value.trim();
+  const preview=document.getElementById("c-img-preview");
+  if(url){
+    preview.innerHTML='<img class="prod-img" src="'+url+'" onerror="this.style.display=\'none\'">';
+  } else {
+    preview.innerHTML='<div class="prod-img-ph">📷 Coller<br>une URL</div>';
+  }
+  const ref=document.getElementById("c-ref").value.trim();
+  if(ref&&url){PROD_IMAGES[ref]=url;saveImages();}
+}
+
 /* ═══ COMMANDE ═══ */
 function renderCtabs(){
   document.getElementById("ctabs").innerHTML=
@@ -790,7 +1168,16 @@ function addMem(cid,ref,colorId){const k=cid+":"+ref;if(!MEM[k])MEM[k]={};MEM[k]
 
 function onRef(){
   const ref=document.getElementById("c-ref").value.trim();
+  const cat=CATALOG.refs[ref];
   if(PROD_NAMES[ref])document.getElementById("c-desc").value=PROD_NAMES[ref];
+  else if(cat&&cat.nom)document.getElementById("c-desc").value=cat.nom;
+  // Load saved image for this REF (priorité : image déjà choisie manuellement > catalogue)
+  if(!editingOrderId){
+    let savedImg=PROD_IMAGES[ref]||"";
+    if(!savedImg&&cat&&cat.cover)savedImg=cat.cover;
+    document.getElementById("c-img").value=savedImg;
+    onImgUrl();
+  }
   checkDupli();
   updateMemChips();
   updateRefChips();
@@ -825,7 +1212,8 @@ function updateMemChips(){
 
 function updateRefChips(){
   const ref=document.getElementById("c-ref").value.trim();
-  const ids=PROD_COLORS[ref];
+  const cat=CATALOG.refs[ref];
+  const ids=cat?Object.keys(cat.colors):PROD_COLORS[ref];
   const box=document.getElementById("ref-chips");
   if(!ids||!ref){box.style.display="none";return;}
   box.style.display="block";
@@ -898,7 +1286,8 @@ function renderOL(){
 function clearCmd(){
   if(OL.length&&!confirm("Vider ?"))return;
   OL=[];
-  ["c-ref","c-desc","c-dlv","c-sup"].forEach(id=>document.getElementById(id).value="");
+  ["c-ref","c-desc","c-dlv","c-sup","c-img"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("c-img-preview").innerHTML='<div class="prod-img-ph">📷 Coller<br>une URL</div>';
   document.getElementById("dupli").style.display="none";
   document.getElementById("ref-chips").style.display="none";
   document.getElementById("mem-box").style.display="none";
@@ -912,21 +1301,45 @@ function validateCmd(){
   const ref=document.getElementById("c-ref").value.trim();
   const desc=document.getElementById("c-desc").value.trim();
   const dlv=document.getElementById("c-dlv").value;
+  const imgUrl=document.getElementById("c-img").value.trim();
   const lines=OL.filter(l=>l.qty>0);
   if(!ref){showToast("⚠ Référence manquante");return;}
   if(!lines.length){showToast("⚠ Aucune quantité");return;}
   if(!activeClient){showToast("⚠ Sélectionnez un client");return;}
   lines.forEach(l=>addMem(activeClient,ref,l.colorId));
   const sup=document.getElementById("c-sup").value||"";
-  const order={id:uid(),date:new Date().toISOString(),ref,desc:desc||ref,
-    clientId:activeClient,clientName:cname(activeClient),
-    supplier:sup,
-    deliveryDate:dlv||null,received:false,lines:JSON.parse(JSON.stringify(lines))};
-  ORDERS.unshift(order);
-  save();
-  showToast("✅ Commande enregistrée");
-  exportXlsx(order);
-  clearCmd();
+  // Save image URL per REF
+  if(ref&&imgUrl){PROD_IMAGES[ref]=imgUrl;saveImages();}
+
+  if(editingOrderId){
+    // ── MODE EDIT ──
+    const o=ORDERS.find(x=>x.id===editingOrderId);
+    if(o){
+      o.ref=ref; o.desc=desc||ref;
+      o.clientId=activeClient; o.clientName=cname(activeClient);
+      o.supplier=sup; o.deliveryDate=dlv||null;
+      o.imageUrl=imgUrl||undefined;
+      o.lines=JSON.parse(JSON.stringify(lines));
+    }
+    save();
+    showToast("✏️ Commande modifiée");
+    editingOrderId=null;
+    document.getElementById("edit-banner").style.display="none";
+    document.querySelector(".cmd-foot .btn-ok").innerHTML="✅ Valider";
+    clearCmd();
+    go("home",document.querySelectorAll(".tab")[0]);
+  } else {
+    // ── MODE CRÉATION ──
+    const order={id:uid(),date:new Date().toISOString(),ref,desc:desc||ref,
+      clientId:activeClient,clientName:cname(activeClient),
+      supplier:sup, imageUrl:imgUrl||undefined,
+      deliveryDate:dlv||null,received:false,lines:JSON.parse(JSON.stringify(lines))};
+    ORDERS.unshift(order);
+    save();
+    showToast("✅ Commande enregistrée");
+    exportXlsx(order);
+    clearCmd();
+  }
 }
 
 /* ═══ NUANCIER ═══ */
@@ -1132,6 +1545,97 @@ function showToast(msg){
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeMC();closeMCL();}});
 
+/* ═══ EXPORT IMAGE COMMANDE (canvas) ═══ */
+function loadImageSafe(url){
+  return new Promise((resolve)=>{
+    if(!url){resolve(null);return;}
+    const proxied="https://wsrv.nl/?url="+encodeURIComponent(url)+"&output=jpg";
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src=proxied;
+  });
+}
+
+async function exportOrderImage(id){
+  const o=ORDERS.find(x=>x.id===id);if(!o)return;
+  showToast("⏳ Génération de l'image…");
+  try{
+    const W=680,PAD=32,ROWH=54,HEADH=56,FOOTH=64;
+    const rawImg=o.imageUrl||PROD_IMAGES[o.ref]||(CATALOG.refs[o.ref]&&CATALOG.refs[o.ref].cover)||"";
+    const img=rawImg?await loadImageSafe(rawImg):null;
+    const photoH=img?W:0;
+    const infoH=94;
+    const totalH=HEADH+photoH+infoH+o.lines.length*ROWH+FOOTH;
+    const canvas=document.createElement("canvas");
+    canvas.width=W;canvas.height=totalH;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#FFFFFF";ctx.fillRect(0,0,W,totalH);
+
+    ctx.fillStyle="#1A1A1A";ctx.font="600 15px sans-serif";ctx.textAlign="left";
+    ctx.fillText("C'MÉLODIE",PAD,32);
+    ctx.fillStyle="#8A847C";ctx.font="12px sans-serif";ctx.textAlign="right";
+    ctx.fillText(new Date(o.date).toLocaleDateString("zh-CN"),W-PAD,32);
+    ctx.textAlign="left";
+    ctx.strokeStyle="#E6E2DC";ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,HEADH);ctx.lineTo(W,HEADH);ctx.stroke();
+
+    let y=HEADH;
+    if(img){ctx.drawImage(img,0,y,W,photoH);y+=photoH;}
+
+    y+=32;
+    ctx.fillStyle="#1A1A1A";ctx.font="600 20px sans-serif";
+    ctx.fillText(o.ref,PAD,y);
+    y+=24;
+    ctx.fillStyle="#6B6560";ctx.font="14px sans-serif";
+    ctx.fillText(o.desc||"",PAD,y);
+    y+=22;
+    ctx.fillStyle="#0C4A8A";ctx.font="12px sans-serif";
+    ctx.fillText((o.clientName||o.clientId||"")+(o.supplier?"   ·   "+o.supplier:""),PAD,y);
+    y+=16;
+    ctx.strokeStyle="#E6E2DC";
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+
+    o.lines.forEach(l=>{
+      y+=ROWH;
+      ctx.fillStyle=l.hex||"#CCCCCC";
+      ctx.beginPath();ctx.arc(PAD+8,y-24,9,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#1A1A1A";ctx.font="600 16px sans-serif";
+      ctx.fillText(l.colorNameZh||l.colorNameFr||"",PAD+28,y-26);
+      if(l.colorNameZh&&l.colorNameFr){
+        ctx.fillStyle="#B0A9A2";ctx.font="11px sans-serif";
+        ctx.fillText(l.colorNameFr,PAD+28,y-9);
+      }
+      ctx.fillStyle="#1A1A1A";ctx.font="600 16px sans-serif";ctx.textAlign="right";
+      ctx.fillText(l.qty+" 件",W-PAD,y-18);
+      ctx.textAlign="left";
+      ctx.strokeStyle="#E6E2DC";
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    });
+
+    y+=FOOTH-16;
+    const total=o.lines.reduce((s,l)=>s+l.qty,0);
+    ctx.fillStyle="#6B6560";ctx.font="13px sans-serif";
+    ctx.fillText("共计",PAD,y);
+    ctx.fillStyle="#1A1A1A";ctx.font="600 18px sans-serif";ctx.textAlign="right";
+    ctx.fillText(total+" 件",W-PAD,y);
+    ctx.textAlign="left";
+
+    canvas.toBlob(blob=>{
+      if(!blob){showToast("⚠ Erreur génération image");return;}
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(blob);
+      a.download="commande_"+o.ref+"_"+o.date.slice(0,10)+".png";
+      a.click();
+      showToast("🖼️ Image générée");
+    },"image/png");
+  }catch(err){
+    console.error(err);
+    showToast("⚠ Erreur génération image (photo bloquée ?)");
+  }
+}
+
 /* ═══ BOOT ═══ */
 load();
 initGrpBar();
@@ -1139,10 +1643,15 @@ renderN();
 go("home",document.querySelector(".tab"));
 initSupSelect();
 showSyncStatus("idle");
-// Persistent event delegation for quick-delete on order cards
+pullCatalogFromGitHub(true); // rafraîchit le catalogue en arrière-plan si configuré
+// Persistent event delegation for quick-delete and edit on order cards
 document.addEventListener("click", function(e){
-  const btn = e.target.closest(".oc-del-btn");
-  if(btn){ e.stopPropagation(); delOrder(btn.dataset.id); }
+  const del = e.target.closest(".oc-del-btn");
+  if(del){ e.stopPropagation(); delOrder(del.dataset.id); return; }
+  const edit = e.target.closest(".oc-edit-btn");
+  if(edit){ e.stopPropagation(); editOrder(edit.dataset.edit); return; }
+  const imgexp = e.target.closest(".oc-img-btn");
+  if(imgexp){ e.stopPropagation(); exportOrderImage(imgexp.dataset.imgexp); return; }
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
